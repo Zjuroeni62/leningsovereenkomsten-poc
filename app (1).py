@@ -8,210 +8,26 @@ from openai import OpenAI
 
 st.set_page_config(
     page_title="Leningsovereenkomsten PoC — Vermetten",
-    page_icon="https://www.vermetten.nl/public/themes/www/_compiled/images/favicon.png",
+    page_icon="📄",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Vermetten huisstijl ───────────────────────────────────────────────────────
-# Kleuren van vermetten.nl:
-#   Donkerblauw:  #1C3F6E  (primair, navigatie, headers)
-#   Middenblauw:  #2B5EA7  (accent, knoppen hover)
-#   Lichtblauw:   #E8EEF7  (achtergronden, zebra)
-#   Oranje/goud:  #E8A020  (call-to-action accentkleur)
-#   Tekst grijs:  #4A4A4A
-#   Lichtgrijs:   #F5F6F8  (achtergronden)
-
 st.markdown("""
 <style>
-    /* ── Vermetten kleurpalet ── */
-    :root {
-        --v-blue:        #1C3F6E;
-        --v-blue-mid:    #2B5EA7;
-        --v-blue-light:  #E8EEF7;
-        --v-gold:        #E8A020;
-        --v-text:        #2C2C2C;
-        --v-muted:       #6B7280;
-        --v-bg:          #F5F6F8;
-        --v-white:       #FFFFFF;
-        --v-border:      #D1D9E6;
-        --v-success:     #15803d;
-        --v-warning:     #b45309;
-        --v-danger:      #dc2626;
-    }
-
-    /* ── Globale achtergrond ── */
-    .stApp { background-color: var(--v-bg); }
-    .stApp > header { background-color: var(--v-blue) !important; }
-
-    /* ── Sidebar ── */
-    [data-testid="stSidebar"] {
-        background-color: var(--v-blue) !important;
-        border-right: none;
-    }
-    [data-testid="stSidebar"] * {
-        color: #FFFFFF !important;
-    }
-    [data-testid="stSidebar"] .stButton > button {
-        background-color: rgba(255,255,255,0.12) !important;
-        border: 1px solid rgba(255,255,255,0.25) !important;
-        color: #FFFFFF !important;
-        border-radius: 6px;
-        font-size: 13px;
-        text-align: left;
-    }
-    [data-testid="stSidebar"] .stButton > button:hover {
-        background-color: rgba(255,255,255,0.22) !important;
-    }
-    [data-testid="stSidebar"] .stButton > button[kind="primary"] {
-        background-color: var(--v-gold) !important;
-        border: none !important;
-        color: #FFFFFF !important;
-        font-weight: 600;
-    }
-    [data-testid="stSidebar"] .stTextInput input {
-        background-color: rgba(255,255,255,0.1) !important;
-        border: 1px solid rgba(255,255,255,0.3) !important;
-        color: #FFFFFF !important;
-        border-radius: 6px;
-    }
-    [data-testid="stSidebar"] .stTextInput input::placeholder { color: rgba(255,255,255,0.5) !important; }
-    [data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.2) !important; }
-
-    /* ── Hoofdinhoud ── */
-    .main .block-container { padding-top: 1.5rem; }
-
-    /* ── Knoppen ── */
-    .stButton > button[kind="primary"] {
-        background-color: var(--v-blue) !important;
-        border: none !important;
-        color: #FFFFFF !important;
-        border-radius: 6px;
-        font-weight: 600;
-        padding: 0.45rem 1.2rem;
-    }
-    .stButton > button[kind="primary"]:hover {
-        background-color: var(--v-blue-mid) !important;
-    }
-    .stButton > button:not([kind="primary"]) {
-        border: 1px solid var(--v-border) !important;
-        color: var(--v-text) !important;
-        border-radius: 6px;
-        background: var(--v-white) !important;
-    }
-
-    /* ── Tabs ── */
-    .stTabs [data-baseweb="tab-list"] {
-        border-bottom: 2px solid var(--v-border);
-        gap: 0;
-    }
-    .stTabs [data-baseweb="tab"] {
-        color: var(--v-muted) !important;
-        font-weight: 500;
-        padding: 0.6rem 1.2rem;
-        border-radius: 0;
-        border-bottom: 2px solid transparent;
-        margin-bottom: -2px;
-    }
-    .stTabs [aria-selected="true"] {
-        color: var(--v-blue) !important;
-        border-bottom: 2px solid var(--v-blue) !important;
-        background: transparent !important;
-    }
-
-    /* ── Metrics ── */
-    [data-testid="metric-container"] {
-        background: var(--v-white);
-        border: 1px solid var(--v-border);
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        border-top: 3px solid var(--v-blue);
-    }
-    [data-testid="metric-container"] label { color: #4A4A4A !important; font-size: 12px !important; }
-    [data-testid="metric-container"] [data-testid="stMetricValue"] { color: var(--v-blue) !important; font-weight: 700; }
-    [data-testid="metric-container"] [data-testid="stMetricDelta"] { color: #4A4A4A !important; }
-
-    /* Expander achtergrond en tekst */
-    [data-testid="stExpander"] { background: #FFFFFF !important; }
-    [data-testid="stExpander"] details { background: #FFFFFF !important; }
-    [data-testid="stExpander"] summary { color: #1C3F6E !important; }
-    [data-testid="stExpanderDetails"] { background: #FFFFFF !important; }
-    [data-testid="stExpanderDetails"] p { color: #2C2C2C !important; }
-    [data-testid="stExpanderDetails"] span { color: #2C2C2C !important; }
-    [data-testid="stExpanderDetails"] label { color: #4A4A4A !important; }
-    [data-testid="stExpanderDetails"] [data-testid="stMetricValue"] { color: #1C3F6E !important; font-weight: 700 !important; }
-    [data-testid="stExpanderDetails"] [data-testid="metric-container"] {
-        background: #F5F6F8 !important;
-        border-top: 3px solid #1C3F6E !important;
-    }
-    /* Zorg dat algemene tekst in de app altijd leesbaar is */
-    .main p, .main span, .main div { color: #2C2C2C; }
-    .main label { color: #4A4A4A !important; }
-    /* Alert/warning tekst */
-    [data-testid="stAlert"] p { color: inherit !important; }
-
-    /* ── Tekstvak ── */
-    .stTextArea textarea {
-        font-size: 13px;
-        line-height: 1.7;
-        border: 1px solid var(--v-border) !important;
-        border-radius: 6px;
-        background: var(--v-white) !important;
-    }
-
-    /* ── Dataframe ── */
-    [data-testid="stDataFrame"] { border: 1px solid var(--v-border); border-radius: 8px; overflow: hidden; }
-
-    /* ── Expander ── */
-    .streamlit-expanderHeader { color: var(--v-blue) !important; font-weight: 500; }
-
-    /* ── Custom banners ── */
-    .v-approved {
+    .stTextArea textarea { font-size: 13px; line-height: 1.7; }
+    .status-gereed  { color: #15803d; font-weight: 500; }
+    .status-review  { color: #b45309; font-weight: 500; }
+    .approved-banner {
         background: #f0fdf4; border: 1px solid #bbf7d0;
-        border-left: 4px solid var(--v-success);
-        border-radius: 6px; padding: 10px 16px;
-        color: var(--v-success); font-size: 14px; margin-bottom: 12px;
+        border-radius: 8px; padding: 10px 16px;
+        color: #15803d; font-size: 14px; margin-bottom: 12px;
     }
-    .v-hitl {
+    .hitl-banner {
         background: #fffbeb; border: 1px solid #fde68a;
-        border-left: 4px solid var(--v-gold);
-        border-radius: 6px; padding: 10px 16px;
+        border-radius: 8px; padding: 10px 16px;
         color: #92400e; font-size: 13px; margin-bottom: 8px;
     }
-    .v-flag {
-        background: #fef2f2; border: 1px solid #fecaca;
-        border-left: 4px solid var(--v-danger);
-        border-radius: 6px; padding: 10px 16px;
-        color: var(--v-danger); font-size: 13px; margin-bottom: 8px;
-    }
-    .v-header-bar {
-        background: var(--v-blue);
-        color: white;
-        padding: 0.8rem 1.2rem;
-        border-radius: 8px;
-        margin-bottom: 1.2rem;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .v-header-bar .v-title { font-size: 17px; font-weight: 700; }
-    .v-header-bar .v-sub   { font-size: 12px; opacity: 0.75; }
-    .v-tag {
-        display: inline-block;
-        background: var(--v-blue-light);
-        color: var(--v-blue);
-        font-size: 11px;
-        font-weight: 600;
-        padding: 2px 8px;
-        border-radius: 4px;
-        margin-right: 4px;
-    }
-    .v-tag-gold {
-        background: #fef3c7;
-        color: #92400e;
-    }
-    .status-gereed  { color: var(--v-success); font-weight: 600; }
-    .status-review  { color: var(--v-warning); font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -267,14 +83,14 @@ EXTRACTION_SCHEMA = {
         "source_quotes": {
             "type": "object",
             "properties": {
-                "principal_amount":    {"type": ["string", "null"]},
-                "interest_rate":       {"type": ["string", "null"]},
-                "repayment_terms":     {"type": ["string", "null"]},
-                "start_date":          {"type": ["string", "null"]},
-                "end_date":            {"type": ["string", "null"]},
-                "security":            {"type": ["string", "null"]},
-                "subordination":       {"type": ["string", "null"]},
-                "special_conditions":  {"type": ["string", "null"]},
+                "principal_amount":   {"type": ["string", "null"]},
+                "interest_rate":      {"type": ["string", "null"]},
+                "repayment_terms":    {"type": ["string", "null"]},
+                "start_date":         {"type": ["string", "null"]},
+                "end_date":           {"type": ["string", "null"]},
+                "security":           {"type": ["string", "null"]},
+                "subordination":      {"type": ["string", "null"]},
+                "special_conditions": {"type": ["string", "null"]},
             },
             "required": ["principal_amount", "interest_rate", "repayment_terms"],
             "additionalProperties": False,
@@ -324,7 +140,7 @@ def get_field_value(data: dict, field: str) -> str | None:
     value = data.get(field)
     return str(value) if value is not None else None
 
-def _matches_any(zoektermen, tekstlijst):
+def _matches_any(zoektermen: list[str], tekstlijst: list[str]) -> bool:
     return any(term in tekst for term in zoektermen for tekst in tekstlijst)
 
 def build_checklist(data: dict) -> list[dict]:
@@ -339,9 +155,9 @@ def build_checklist(data: dict) -> list[dict]:
         present  = value is not None and value.strip() != ""
         zoektermen = [field.lower(), label.lower()]
         if _matches_any(zoektermen, missing):
-            remark = "Ontbreekt"
+            remark = "Ontbreekt volgens model"
         elif _matches_any(zoektermen, uncertain):
-            remark = "Onzeker"
+            remark = "Onzeker volgens model"
         elif present:
             remark = "Aanwezig"
         else:
@@ -359,10 +175,10 @@ def build_checklist(data: dict) -> list[dict]:
 def determine_status(checklist: list[dict]) -> str:
     verplicht = [i for i in checklist if i["required"]]
     ontbreekt = [i for i in verplicht if not i["present"]]
-    onzeker   = [i for i in verplicht if i["remark"] == "Onzeker"]
+    onzeker   = [i for i in verplicht if i["remark"] == "Onzeker volgens model"]
     return "Gereed voor review" if not ontbreekt and not onzeker else "Review vereist"
 
-def compute_precision_recall(checklist):
+def compute_precision_recall(checklist: list[dict]) -> tuple[float | None, float | None]:
     totaal_schema = len(CHECKLIST_ITEMS)
     herkend       = [i for i in checklist if i["present"] and i["remark"] == "Aanwezig"]
     n_totaal_pres = sum(1 for i in checklist if i["present"])
@@ -372,7 +188,7 @@ def compute_precision_recall(checklist):
 
 # ── OpenAI ────────────────────────────────────────────────────────────────────
 
-def extract_data(client, document_text):
+def extract_data(client: OpenAI, document_text: str) -> dict:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         temperature=0,
@@ -400,7 +216,7 @@ def extract_data(client, document_text):
     )
     return json.loads(response.choices[0].message.content)
 
-def generate_toelichting(client, data):
+def generate_toelichting(client: OpenAI, data: dict) -> str:
     relevante_velden = [
         "document_type", "parties", "principal_amount", "interest_rate",
         "start_date", "end_date", "repayment_terms", "security",
@@ -436,23 +252,10 @@ def generate_toelichting(client, data):
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    # Logo / branding
-    st.markdown("""
-    <div style="padding: 0.5rem 0 1rem 0; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 1rem;">
-        <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: white;">
-            Vermetten
-        </div>
-        <div style="font-size: 11px; color: rgba(255,255,255,0.65); margin-top: 2px;">
-            accountants en adviseurs
-        </div>
-        <div style="margin-top: 8px;">
-            <span style="background: rgba(232,160,32,0.3); color: #fbbf24; font-size: 10px;
-                         font-weight: 600; padding: 2px 8px; border-radius: 4px;">
-                PoC · Leningsovereenkomsten
-            </span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("### 📄 Leningsovereenkomsten")
+    st.markdown("AI-gestuurde toelichting voor de jaarrekening — RJ 272")
+    st.caption("Scope: middelgrote rechtspersonen")
+    st.divider()
 
     api_key = st.text_input(
         "OpenAI API-sleutel",
@@ -461,71 +264,58 @@ with st.sidebar:
         help="PoC-fase: OpenAI API. Productie: private deployment vereist (AVG).",
     )
 
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    st.divider()
 
-    if st.button("➕ Nieuw contract verwerken", use_container_width=True, type="primary"):
+    if st.button("➕ Nieuw contract", use_container_width=True, type="primary"):
         st.session_state.active_idx = None
 
-    if st.session_state.contracts:
-        st.markdown(
-            "<div style='font-size:11px; font-weight:600; text-transform:uppercase; "
-            "letter-spacing:0.8px; color:rgba(255,255,255,0.5); margin: 1rem 0 0.5rem;'>"
-            "Contracten</div>",
-            unsafe_allow_html=True,
-        )
-        for i, c in enumerate(st.session_state.contracts):
-            status_icon   = "✅" if c["status"] == "Gereed voor review" else "⚠️"
-            approved_icon = " 🔒" if c.get("approved") else ""
-            label = f"{status_icon} {c['name'][:26]}{approved_icon}"
-            if st.button(label, key=f"nav_{i}", use_container_width=True):
-                st.session_state.active_idx = i
+    st.markdown("**Verwerkte contracten**")
+    for i, c in enumerate(st.session_state.contracts):
+        status_icon   = "✅" if c["status"] == "Gereed voor review" else "⚠️"
+        approved_icon = " 🔒" if c.get("approved") else ""
+        label = f"{status_icon} {c['name'][:24]}{approved_icon}"
+        if st.button(label, key=f"nav_{i}", use_container_width=True):
+            st.session_state.active_idx = i
 
+    if st.session_state.contracts:
         st.divider()
         gereed      = sum(1 for c in st.session_state.contracts if c["status"] == "Gereed voor review")
         goedgekeurd = sum(1 for c in st.session_state.contracts if c.get("approved"))
-        st.caption(f"Totaal: {len(st.session_state.contracts)} · Gereed: {gereed} · Goedgekeurd: {goedgekeurd}")
+        st.caption(f"Totaal: {len(st.session_state.contracts)} | Gereed: {gereed} | Goedgekeurd: {goedgekeurd}")
 
     if st.session_state.audit_log:
         st.divider()
-        with st.expander(f"📋 Audit trail ({len(st.session_state.audit_log)})"):
-            df_audit = pd.DataFrame(st.session_state.audit_log)
-            st.dataframe(df_audit, use_container_width=True, hide_index=True)
-
-    st.markdown("<div style='height: 2rem'></div>", unsafe_allow_html=True)
-    st.caption("Zonder gedoe.")
+        with st.expander(f"📋 Audit trail ({len(st.session_state.audit_log)} entries)"):
+            st.dataframe(pd.DataFrame(st.session_state.audit_log), use_container_width=True, hide_index=True)
 
 # ── Hoofdpagina: nieuw contract ───────────────────────────────────────────────
 
 if st.session_state.active_idx is None:
 
-    # Paginakop in Vermetten stijl
-    st.markdown("""
-    <div class="v-header-bar">
-        <div>
-            <div class="v-title">📄 Nieuw contract verwerken</div>
-            <div class="v-sub">AI-gestuurde toelichting · RJ 272 · Middelgrote rechtspersonen</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("Nieuw contract verwerken")
+    st.caption(
+        "Upload een leningsovereenkomst als PDF. Het AI-model extraheert de gegevens en genereert "
+        "een concept-toelichting conform RJ 272 (middelgrote rechtspersonen)."
+    )
 
     st.markdown(
-        '<div class="v-hitl">'
+        '<div class="hitl-banner">'
         "⚠️ <strong>Human-in-the-loop:</strong> de gegenereerde toelichting is altijd een concept. "
         "De accountant beoordeelt, past zo nodig aan, en keurt goed voordat de toelichting "
-        "in de jaarrekening wordt opgenomen. Zonder gedoe."
+        "in de jaarrekening wordt opgenomen."
         "</div>",
         unsafe_allow_html=True,
     )
 
     if not api_key:
         st.info("Voer eerst je OpenAI API-sleutel in de zijbalk in.")
-        st.caption("ℹ️ PoC-fase: OpenAI API. Voor productiegebruik is private deployment vereist conform AVG en kantoorbeleid van Vermetten.")
+        st.caption("ℹ️ PoC-fase: OpenAI API. Voor productiegebruik is private deployment vereist conform AVG en kantoorbeleid.")
         st.stop()
 
     uploaded = st.file_uploader(
         "Selecteer een PDF-bestand",
         type=["pdf"],
-        help="Ondersteund: PDF. Max. aanbevolen 10 MB.",
+        help="Ondersteund formaat: PDF. Aanbevolen max. 10 MB.",
     )
 
     if uploaded:
@@ -536,6 +326,7 @@ if st.session_state.active_idx is None:
             log_event("Upload", uploaded.name, "PDF geüpload voor verwerking")
 
             with st.status("Contract verwerken...", expanded=True) as status_widget:
+
                 st.write("📖 Tekst extraheren uit PDF...")
                 try:
                     document_text = extract_text_from_pdf(uploaded)
@@ -596,9 +387,13 @@ if st.session_state.active_idx is None:
             st.rerun()
 
     st.divider()
+    st.info(
+        "**Human-in-the-loop:** de gegenereerde toelichting is een concept. "
+        "De accountant beoordeelt en keurt de inhoud goed voordat deze in de jaarrekening wordt opgenomen."
+    )
 
     if st.session_state.contracts:
-        st.markdown("#### Overzicht contracten")
+        st.subheader("Overzicht alle contracten")
         overzicht = []
         for c in st.session_state.contracts:
             hs = get_field_value(c["data"], "principal_amount") or "—"
@@ -606,9 +401,9 @@ if st.session_state.active_idx is None:
                 "Contract":        c["name"],
                 "Verwerkt op":     c.get("verwerkt_op", "—"),
                 "Status":          c["status"],
-                "Goedgekeurd":     "✅ Ja" if c.get("approved") else "❌ Nee",
+                "Goedgekeurd":     "Ja" if c.get("approved") else "Nee",
                 "Hoofdsom":        hs,
-                "Rente":           f"{c['data'].get('interest_rate', '—')}%" if c["data"].get("interest_rate") is not None else "—",
+                "Rentepercentage": f"{c['data'].get('interest_rate', '—')}%" if c["data"].get("interest_rate") is not None else "—",
                 "Precision":       f"{c['precision']:.0f}%" if c.get("precision") is not None else "—",
                 "Recall":          f"{c['recall']:.0f}%"    if c.get("recall")    is not None else "—",
             })
@@ -624,57 +419,46 @@ else:
 
     n_verplicht = sum(1 for i in cl if i["required"])
     n_aanwezig  = sum(1 for i in cl if i["required"] and i["present"])
-    n_onzeker   = sum(1 for i in cl if i["remark"] == "Onzeker")
-    n_ontbreekt = sum(1 for i in cl if i["remark"] == "Ontbreekt")
+    n_onzeker   = sum(1 for i in cl if i["remark"] == "Onzeker volgens model")
+    n_ontbreekt = sum(1 for i in cl if i["remark"] == "Ontbreekt volgens model")
     n_quotes    = sum(1 for i in cl if i["quote"])
     n_low_conf  = sum(1 for i in cl if i.get("confidence") == "low")
 
-    # Header
     col_title, col_btn = st.columns([3, 1])
     with col_title:
-        st.markdown(f"""
-        <div class="v-header-bar">
-            <div>
-                <div class="v-title">📄 {c['name']}</div>
-                <div class="v-sub">Verwerkt op {c.get('verwerkt_op', '—')} · RJ 272 · Middelgrote rechtspersonen</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.title(c["name"])
+        st.caption(f"Verwerkt op: {c.get('verwerkt_op', '—')} — Scope: RJ 272 middelgrote rechtspersonen")
         status_class = "status-gereed" if c["status"] == "Gereed voor review" else "status-review"
-        st.markdown(
-            f'{"✅" if c["status"] == "Gereed voor review" else "⚠️"} '
-            f'<span class="{status_class}">{c["status"]}</span>',
-            unsafe_allow_html=True,
-        )
+        status_icon  = "✅" if c["status"] == "Gereed voor review" else "⚠️"
+        st.markdown(f'{status_icon} <span class="{status_class}">{c["status"]}</span>', unsafe_allow_html=True)
     with col_btn:
-        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
         if c.get("approved"):
-            st.success("🔒 Goedgekeurd")
+            st.success("Goedgekeurd door accountant")
         else:
             if st.button("✅ Goedkeuren", type="primary", use_container_width=True, key=f"approve_header_{idx}"):
                 st.session_state.contracts[idx]["approved"] = True
-                log_event("Goedgekeurd", c["name"], "Goedgekeurd door accountant")
+                log_event("Goedgekeurd", c["name"], "Toelichting goedgekeurd door accountant")
                 st.rerun()
 
     if c.get("approved"):
-        st.markdown('<div class="v-approved">🔒 Deze toelichting is goedgekeurd door de accountant en kan worden opgenomen in de jaarrekening.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="approved-banner">🔒 Deze toelichting is goedgekeurd door de accountant en kan worden opgenomen in de jaarrekening.</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="v-hitl">⚠️ <strong>Concept:</strong> beoordeel de toelichting en checklistresultaten voordat u goedkeurt.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="hitl-banner">⚠️ <strong>Concept:</strong> beoordeel de toelichting en de checklistresultaten voordat u goedkeurt.</div>', unsafe_allow_html=True)
 
     if n_low_conf:
-        lage = ", ".join(i["label"] for i in cl if i.get("confidence") == "low")
-        st.markdown(f'<div class="v-flag">🔴 <strong>Extra review aanbevolen</strong> — lage confidence voor: {lage}</div>', unsafe_allow_html=True)
+        lage_velden = ", ".join(i["label"] for i in cl if i.get("confidence") == "low")
+        st.warning(f"⚠️ **Extra review aanbevolen** — lage confidence voor: {lage_velden}")
 
-    # Metrics
     m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric("Verplichte velden",   f"{n_aanwezig}/{n_verplicht}")
     m2.metric("Onzekere velden",     n_onzeker)
     m3.metric("Ontbrekende velden",  n_ontbreekt)
     m4.metric("Bronquotes",          n_quotes)
-    m5.metric("Precision",  f"{c['precision']:.0f}%" if c.get("precision") is not None else "—", help="Streefwaarde ≥ 95%")
-    m6.metric("Recall",     f"{c['recall']:.0f}%"    if c.get("recall")    is not None else "—", help="Streefwaarde ≥ 90%")
+    m5.metric("Precision", f"{c['precision']:.0f}%" if c.get("precision") is not None else "—", help="Streefwaarde ≥ 95%")
+    m6.metric("Recall",    f"{c['recall']:.0f}%"    if c.get("recall")    is not None else "—", help="Streefwaarde ≥ 90%")
 
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    st.divider()
 
     tab1, tab2, tab3, tab4 = st.tabs([
         "📋 Checklistvalidatie RJ 272",
@@ -683,10 +467,9 @@ else:
         "📋 Audit trail",
     ])
 
-    # ── Tab 1 ─────────────────────────────────────────────────────────────────
     with tab1:
         st.subheader("Checklistvalidatie RJ 272")
-        st.caption("Toetsing aan de vereisten voor middelgrote rechtspersonen.")
+        st.caption("Toetsing van geëxtraheerde contractgegevens aan de vereisten voor middelgrote rechtspersonen.")
 
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -714,9 +497,9 @@ else:
         df = pd.DataFrame(rows)
 
         def kleur_opmerking(val):
-            if val == "Aanwezig":  return "color: #15803d"
-            if val == "Onzeker":   return "color: #b45309"
-            if val == "Ontbreekt": return "color: #dc2626"
+            if val == "Aanwezig":                return "color: #15803d"
+            if val == "Onzeker volgens model":   return "color: #b45309"
+            if val == "Ontbreekt volgens model": return "color: #dc2626"
             return "color: #6b7280"
 
         def kleur_confidence(val):
@@ -738,7 +521,7 @@ else:
         else:
             st.success("Alle verplichte RJ 272-velden zijn aangetroffen.")
         if n_onzeker:
-            st.warning(f"**{n_onzeker} veld(en) onzeker:** " + ", ".join(i["label"] for i in cl if i["remark"] == "Onzeker"))
+            st.warning(f"**{n_onzeker} veld(en) onzeker:** " + ", ".join(i["label"] for i in cl if i["remark"] == "Onzeker volgens model"))
 
         with st.expander("📊 Kwaliteitsmetrieken (borgingsplan streefwaarden)"):
             prec, rec = c.get("precision"), c.get("recall")
@@ -748,7 +531,6 @@ else:
             if prec is not None and prec < 95: st.warning("Precision onder streefwaarde (≥ 95%)")
             if rec  is not None and rec  < 90: st.warning("Recall onder streefwaarde (≥ 90%)")
 
-    # ── Tab 2 ─────────────────────────────────────────────────────────────────
     with tab2:
         st.subheader("Concept-toelichting jaarrekening")
         st.caption("Gegenereerd conform RJ 272. Controleer, bewerk indien nodig, en keur goed.")
@@ -772,7 +554,7 @@ else:
             if not c.get("approved"):
                 if st.button("✅ Goedkeuren", type="primary", use_container_width=True, key=f"approve_tab2_{idx}"):
                     st.session_state.contracts[idx]["approved"] = True
-                    log_event("Goedgekeurd", c["name"], "Via toelichting-tab")
+                    log_event("Goedgekeurd", c["name"], "Goedgekeurd via toelichting-tab")
                     st.rerun()
         with col_b:
             st.download_button(
@@ -785,10 +567,9 @@ else:
         if c.get("approved"):
             st.info("Toelichting is goedgekeurd. Verwijder de goedkeuring bovenaan om opnieuw te bewerken.")
 
-    # ── Tab 3 ─────────────────────────────────────────────────────────────────
     with tab3:
-        st.subheader("Ruwe extractie")
-        st.caption("Volledige modeloutput inclusief bronquotes, confidence scores en uncertain_items.")
+        st.subheader("Ruwe extractie (JSON)")
+        st.caption("Volledige output van het extractiemodel, inclusief bronquotes, confidence scores en uncertain_items.")
 
         col_p, col_s = st.columns(2)
         with col_p:
@@ -796,13 +577,13 @@ else:
             parties = data.get("parties") or {}
             st.markdown(f"- Leninggever: {parties.get('creditor') or '—'}")
             st.markdown(f"- Leningnemer: {parties.get('debtor')   or '—'}")
-            st.markdown("**Ontbrekende items**")
+            st.markdown("**Ontbrekende items (model)**")
             for m in (data.get("missing_items") or []):
                 st.markdown(f"- {m}")
             if not data.get("missing_items"):
                 st.caption("Geen")
         with col_s:
-            st.markdown("**Onzekere items**")
+            st.markdown("**Onzekere items (model)**")
             for u in (data.get("uncertain_items") or []):
                 st.markdown(f"- {u}")
             if not data.get("uncertain_items"):
@@ -828,7 +609,6 @@ else:
         with st.expander("Volledige JSON-output"):
             st.json(data)
 
-    # ── Tab 4 ─────────────────────────────────────────────────────────────────
     with tab4:
         st.subheader("Audit trail")
         st.caption("Vastlegging van verwerkingsstappen conform het borgingsplan (wie, wanneer, wat).")
