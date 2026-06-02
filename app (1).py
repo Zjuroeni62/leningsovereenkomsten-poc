@@ -127,8 +127,23 @@ st.markdown("""
         padding: 0.75rem 1rem;
         border-top: 3px solid var(--v-blue);
     }
-    [data-testid="metric-container"] label { color: var(--v-muted) !important; font-size: 12px !important; }
+    [data-testid="metric-container"] label { color: #4A4A4A !important; font-size: 12px !important; }
     [data-testid="metric-container"] [data-testid="stMetricValue"] { color: var(--v-blue) !important; font-weight: 700; }
+    [data-testid="metric-container"] [data-testid="stMetricDelta"] { color: #4A4A4A !important; }
+
+    /* Expander: zorg voor leesbare tekst op lichte achtergrond */
+    .streamlit-expanderContent { background: var(--v-white) !important; }
+    .streamlit-expanderContent [data-testid="metric-container"] {
+        background: var(--v-bg) !important;
+    }
+    .streamlit-expanderContent [data-testid="metric-container"] label { color: #4A4A4A !important; }
+    .streamlit-expanderContent [data-testid="metric-container"] [data-testid="stMetricValue"] {
+        color: var(--v-blue) !important;
+    }
+    .streamlit-expanderContent .stAlert p { color: #4A4A4A !important; }
+    .streamlit-expanderContent p,
+    .streamlit-expanderContent span,
+    .streamlit-expanderContent div { color: #2C2C2C; }
 
     /* ── Tekstvak ── */
     .stTextArea textarea {
@@ -471,12 +486,8 @@ with st.sidebar:
             df_audit = pd.DataFrame(st.session_state.audit_log)
             st.dataframe(df_audit, use_container_width=True, hide_index=True)
 
-    st.markdown("""
-    <div style="position:absolute; bottom:1.5rem; left:1rem; right:1rem;
-                font-size:11px; color:rgba(255,255,255,0.4); text-align:center;">
-        Zonder gedoe.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div style='height: 2rem'></div>", unsafe_allow_html=True)
+    st.caption("Zonder gedoe.")
 
 # ── Hoofdpagina: nieuw contract ───────────────────────────────────────────────
 
