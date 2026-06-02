@@ -131,19 +131,24 @@ st.markdown("""
     [data-testid="metric-container"] [data-testid="stMetricValue"] { color: var(--v-blue) !important; font-weight: 700; }
     [data-testid="metric-container"] [data-testid="stMetricDelta"] { color: #4A4A4A !important; }
 
-    /* Expander: zorg voor leesbare tekst op lichte achtergrond */
-    .streamlit-expanderContent { background: var(--v-white) !important; }
-    .streamlit-expanderContent [data-testid="metric-container"] {
-        background: var(--v-bg) !important;
+    /* Expander achtergrond en tekst */
+    [data-testid="stExpander"] { background: #FFFFFF !important; }
+    [data-testid="stExpander"] details { background: #FFFFFF !important; }
+    [data-testid="stExpander"] summary { color: #1C3F6E !important; }
+    [data-testid="stExpanderDetails"] { background: #FFFFFF !important; }
+    [data-testid="stExpanderDetails"] p { color: #2C2C2C !important; }
+    [data-testid="stExpanderDetails"] span { color: #2C2C2C !important; }
+    [data-testid="stExpanderDetails"] label { color: #4A4A4A !important; }
+    [data-testid="stExpanderDetails"] [data-testid="stMetricValue"] { color: #1C3F6E !important; font-weight: 700 !important; }
+    [data-testid="stExpanderDetails"] [data-testid="metric-container"] {
+        background: #F5F6F8 !important;
+        border-top: 3px solid #1C3F6E !important;
     }
-    .streamlit-expanderContent [data-testid="metric-container"] label { color: #4A4A4A !important; }
-    .streamlit-expanderContent [data-testid="metric-container"] [data-testid="stMetricValue"] {
-        color: var(--v-blue) !important;
-    }
-    .streamlit-expanderContent .stAlert p { color: #4A4A4A !important; }
-    .streamlit-expanderContent p,
-    .streamlit-expanderContent span,
-    .streamlit-expanderContent div { color: #2C2C2C; }
+    /* Zorg dat algemene tekst in de app altijd leesbaar is */
+    .main p, .main span, .main div { color: #2C2C2C; }
+    .main label { color: #4A4A4A !important; }
+    /* Alert/warning tekst */
+    [data-testid="stAlert"] p { color: inherit !important; }
 
     /* ── Tekstvak ── */
     .stTextArea textarea {
@@ -805,7 +810,14 @@ else:
             st.markdown("**Confidence scores**")
             for k, v in (data.get("confidence_scores") or {}).items():
                 if v:
-                    kleur = {"high": "🟢", "medium": "🟡", "low": "🔴"}.get(v, "⚪")
+                    if v == "high":
+                        kleur = "🟢"
+                    elif v == "medium":
+                        kleur = "🟡"
+                    elif v == "low":
+                        kleur = "🔴"
+                    else:
+                        kleur = "⚪"
                     st.markdown(f"- {kleur} *{k}:* {v}")
             st.markdown("**Bronquotes**")
             for k, v in (data.get("source_quotes") or {}).items():
