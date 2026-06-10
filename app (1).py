@@ -33,15 +33,15 @@ st.markdown("""
 
 # ── Constanten ────────────────────────────────────────────────────────────────
 CHECKLIST_ITEMS = [
-    {"field": "principal_amount",   "label": "Hoofdsom",               "required": True,  "rj": "RJ 272.408a"},
-    {"field": "interest_rate",      "label": "Rentepercentage",        "required": True,  "rj": "RJ 272.408b"},
-    {"field": "start_date",         "label": "Ingangsdatum",           "required": True,  "rj": "RJ 272.408c"},
-    {"field": "end_date",           "label": "Einddatum",              "required": False, "rj": "RJ 272.408c"},
-    {"field": "term_description",   "label": "Looptijdomschrijving",   "required": False, "rj": "RJ 272.408c"},
-    {"field": "repayment_terms",    "label": "Aflossingsvoorwaarden",  "required": True,  "rj": "RJ 272.408d"},
-    {"field": "security",           "label": "Zekerheden",             "required": False, "rj": "RJ 272.408e"},
-    {"field": "subordination",      "label": "Achterstelling",         "required": False, "rj": "RJ 272.408f"},
-    {"field": "special_conditions", "label": "Bijzondere voorwaarden", "required": False, "rj": "RJ 272.408g"},
+{"field": "principal_amount",   "label": "Hoofdsom",               "required": True,  "rj": "RJ 254.408a / art. 2:375 lid 1 BW"},
+    {"field": "interest_rate",      "label": "Rentepercentage",        "required": True,  "rj": "RJ 254.403 / art. 2:375 lid 2 BW"},
+    {"field": "start_date",         "label": "Ingangsdatum",           "required": True,  "rj": "RJ 254.408a / art. 2:375 lid 2 BW"},
+    {"field": "end_date",           "label": "Einddatum",              "required": False, "rj": "art. 2:375 lid 2 BW"},
+    {"field": "term_description",   "label": "Looptijdomschrijving",   "required": False, "rj": "art. 2:375 lid 2 BW"},
+    {"field": "repayment_terms",    "label": "Aflossingsvoorwaarden",  "required": True,  "rj": "RJ 254.408a / art. 2:375 lid 6 BW"},
+    {"field": "security",           "label": "Zekerheden",             "required": False, "rj": "art. 2:375 lid 3 BW"},
+    {"field": "subordination",      "label": "Achterstelling",         "required": False, "rj": "art. 2:375 lid 4 BW"},
+    {"field": "special_conditions", "label": "Bijzondere voorwaarden", "required": False, "rj": "RJ 254.408"},
 ]
 
 EXTRACTION_SCHEMA = {
@@ -197,7 +197,7 @@ def extract_data(client: OpenAI, document_text: str) -> dict:
             {
                 "role": "system",
                 "content": (
-                    "Je analyseert een Nederlandse leningsovereenkomst voor middelgrote rechtspersonen (RJ 272). "
+                    "Je analyseert een Nederlandse leningsovereenkomst voor middelgrote rechtspersonen (RJ 254). "
                     "Extraheer ALLEEN informatie die expliciet in de contracttekst staat. "
                     "Gebruik null voor ontbrekende velden — verzin niets. "
                     "Geef per geëxtraheerd veld een confidence score: 'high' (expliciet vermeld), "
@@ -232,7 +232,7 @@ def generate_toelichting(client: OpenAI, data: dict) -> str:
                 "role": "system",
                 "content": (
                     "Je schrijft een zakelijke Nederlandse jaarrekeningtoelichting "
-                    "voor middelgrote rechtspersonen op basis van contractgegevens conform RJ 272. "
+                    "voor middelgrote rechtspersonen op basis van contractgegevens conform RJ 254. "
                     "Verzin niets. Laat null-velden weg. "
                     "Dit is een concept dat door een accountant beoordeeld wordt. "
                     'Sluit af met: "Dit betreft een concept-toelichting. De accountant voert een finale beoordeling uit voordat deze wordt opgenomen in de jaarrekening."'
@@ -253,7 +253,7 @@ def generate_toelichting(client: OpenAI, data: dict) -> str:
 
 with st.sidebar:
     st.markdown("### 📄 Leningsovereenkomsten")
-    st.markdown("AI-gestuurde toelichting voor de jaarrekening — RJ 272")
+    st.markdown("AI-gestuurde toelichting voor de jaarrekening — RJ 254")
     st.caption("Scope: middelgrote rechtspersonen")
     st.divider()
 
@@ -295,7 +295,7 @@ if st.session_state.active_idx is None:
     st.title("Nieuw contract verwerken")
     st.caption(
         "Upload een leningsovereenkomst als PDF. Het AI-model extraheert de gegevens en genereert "
-        "een concept-toelichting conform RJ 272 (middelgrote rechtspersonen)."
+        "een concept-toelichting conform RJ 254 (middelgrote rechtspersonen)."
     )
 
     st.markdown(
@@ -347,7 +347,7 @@ if st.session_state.active_idx is None:
                     st.stop()
                 st.write("✓ Gegevens geëxtraheerd")
 
-                st.write("📋 Checklist valideren tegen RJ 272...")
+                st.write("📋 Checklist valideren tegen RJ 254...")
                 checklist  = build_checklist(extracted)
                 status_val = determine_status(checklist)
                 precision, recall = compute_precision_recall(checklist)
@@ -427,7 +427,7 @@ else:
     col_title, col_btn = st.columns([3, 1])
     with col_title:
         st.title(c["name"])
-        st.caption(f"Verwerkt op: {c.get('verwerkt_op', '—')} — Scope: RJ 272 middelgrote rechtspersonen")
+        st.caption(f"Verwerkt op: {c.get('verwerkt_op', '—')} — Scope: RJ 254 middelgrote rechtspersonen")
         status_class = "status-gereed" if c["status"] == "Gereed voor review" else "status-review"
         status_icon  = "✅" if c["status"] == "Gereed voor review" else "⚠️"
         st.markdown(f'{status_icon} <span class="{status_class}">{c["status"]}</span>', unsafe_allow_html=True)
@@ -461,14 +461,14 @@ else:
     st.divider()
 
     tab1, tab2, tab3, tab4 = st.tabs([
-        "📋 Checklistvalidatie RJ 272",
+        "📋 Checklistvalidatie RJ 254",
         "✍️ Concept-toelichting",
         "🔍 Ruwe extractie",
         "📋 Audit trail",
     ])
 
     with tab1:
-        st.subheader("Checklistvalidatie RJ 272")
+        st.subheader("Checklistvalidatie RJ 254")
         st.caption("Toetsing van geëxtraheerde contractgegevens aan de vereisten voor middelgrote rechtspersonen.")
 
         col_f1, col_f2 = st.columns(2)
@@ -519,7 +519,7 @@ else:
         if ontbrekende_verplicht:
             st.warning(f"**{len(ontbrekende_verplicht)} verplicht(e) veld(en) ontbreken:** " + ", ".join(i["label"] for i in ontbrekende_verplicht))
         else:
-            st.success("Alle verplichte RJ 272-velden zijn aangetroffen.")
+            st.success("Alle verplichte RJ 254-velden zijn aangetroffen.")
         if n_onzeker:
             st.warning(f"**{n_onzeker} veld(en) onzeker:** " + ", ".join(i["label"] for i in cl if i["remark"] == "Onzeker volgens model"))
 
@@ -533,7 +533,7 @@ else:
 
     with tab2:
         st.subheader("Concept-toelichting jaarrekening")
-        st.caption("Gegenereerd conform RJ 272. Controleer, bewerk indien nodig, en keur goed.")
+        st.caption("Gegenereerd conform RJ 254. Controleer, bewerk indien nodig, en keur goed.")
 
         toelichting_key = f"toelichting_{idx}"
         if toelichting_key not in st.session_state:
