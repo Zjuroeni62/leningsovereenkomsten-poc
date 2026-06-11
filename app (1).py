@@ -215,6 +215,8 @@ def extract_data(client: OpenAI, document_text: str) -> dict:
                     "Einddatum: alleen invullen als het contract die expliciet vermeldt of direct definieert "
                     "(bijvoorbeeld 'zeven jaar na de ingangsdatum'); zo'n afgeleide datum krijgt confidence "
                     "'medium'. Een einddatum die alleen uit het aflossingsschema zou volgen, blijft null. "
+                    "Vermeld onder special_conditions letterlijk in het contract opgenomen bijzondere bepalingen, "
+                    "zoals afspraken over vervroegde aflossing, boeterente of convenanten. "
                     "source_quotes bevatten uitsluitend letterlijke citaten uit de contracttekst. "
                     "Signaleer interne tegenstrijdigheden in het contract (bijvoorbeeld een bedrag in cijfers "
                     "dat afwijkt van het bedrag in letters) altijd als uncertain_item. "
