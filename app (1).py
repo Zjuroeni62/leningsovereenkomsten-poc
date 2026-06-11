@@ -164,12 +164,17 @@ def build_checklist(data: dict) -> list[dict]:
             remark = "Aanwezig"
         else:
             remark = "Niet aangetroffen"
+        conf = scores.get(field)
+        if isinstance(conf, dict):
+            conf = conf.get("value") or next(iter(conf.values()), None)
+        if conf is None:
+            conf = scores.get(f"{field}.value")
         rows.append({
             **item,
             "value":      value,
             "present":    present,
             "remark":     remark,
-            "confidence": scores.get(field) or scores.get(f"{field}.value"),
+            "confidence": conf,
             "quote":      (data.get("source_quotes") or {}).get(field),
         })
     return rows
