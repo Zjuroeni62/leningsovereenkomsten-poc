@@ -33,7 +33,7 @@ st.markdown("""
 
 # ── Constanten ────────────────────────────────────────────────────────────────
 CHECKLIST_ITEMS = [
-{"field": "principal_amount",   "label": "Hoofdsom",               "required": True,  "rj": "RJ 254.408a / art. 2:375 lid 1 BW"},
+    {"field": "principal_amount",   "label": "Hoofdsom",               "required": True,  "rj": "RJ 254.408a / art. 2:375 lid 1 BW"},
     {"field": "interest_rate",      "label": "Rentepercentage",        "required": True,  "rj": "RJ 254.403 / art. 2:375 lid 2 BW"},
     {"field": "start_date",         "label": "Ingangsdatum",           "required": True,  "rj": "RJ 254.408a / art. 2:375 lid 2 BW"},
     {"field": "end_date",           "label": "Einddatum",              "required": False, "rj": "art. 2:375 lid 2 BW"},
@@ -43,6 +43,8 @@ CHECKLIST_ITEMS = [
     {"field": "subordination",      "label": "Achterstelling",         "required": False, "rj": "art. 2:375 lid 4 BW"},
     {"field": "special_conditions", "label": "Bijzondere voorwaarden", "required": False, "rj": "RJ 254.408"},
 ]
+
+MAX_CONTRACT_CHARS = 12000  # verwerkingslimiet extractieprompt
 
 EXTRACTION_SCHEMA = {
     "type": "object",
@@ -178,13 +180,13 @@ def determine_status(checklist: list[dict]) -> str:
     onzeker   = [i for i in verplicht if i["remark"] == "Onzeker volgens model"]
     return "Gereed voor review" if not ontbreekt and not onzeker else "Review vereist"
 
-def compute_precision_recall(checklist: list[dict]) -> tuple[float | None, float | None]:
-    totaal_schema = len(CHECKLIST_ITEMS)
-    herkend       = [i for i in checklist if i["present"] and i["remark"] == "Aanwezig"]
-    n_totaal_pres = sum(1 for i in checklist if i["present"])
-    precision = (len(herkend) / n_totaal_pres * 100) if n_totaal_pres else None
-    recall    = (len(herkend) / totaal_schema  * 100) if totaal_schema else None
-    return precision, recall
+def compute_volledigheid(checklist: list[dict]) -> float | None:
+    """Volledigheid: correct herkende verplichte velden t.o.v. alle verplichte velden.
+    Echte precision/recall worden gemeten via de regressietestset met ground truth
+    (zie borgingsplan); deze metric toont de live volledigheid per contract."""
+    verplicht = [i for i in checklist if i["required"]]
+    herkend   = [i for i in verplicht if i["present"] and i["remark"] == "Aanwezig"]
+    return (len(herkend) / len(verplicht) * 100) if verplicht else None
 
 # ── OpenAI ────────────────────────────────────────────────────────────────────
 
@@ -202,6 +204,12 @@ def extract_data(client: OpenAI, document_text: str) -> dict:
                     "Gebruik null voor ontbrekende velden — verzin niets. "
                     "Geef per geëxtraheerd veld een confidence score: 'high' (expliciet vermeld), "
                     "'medium' (afgeleid), 'low' (onzeker). "
+                    "Hanteer als ingangsdatum de datum van uitbetaling indien het contract bepaalt dat de "
+                    "looptijd daarop aanvangt; gebruik anders de ondertekeningsdatum met confidence 'medium'. "
+                    "Geef berekende of afgeleide waarden (zoals een einddatum afgeleid uit de looptijd) "
+                    "nooit confidence 'high', maar 'medium'. "
+                    "Signaleer interne tegenstrijdigheden in het contract (bijvoorbeeld een bedrag in cijfers "
+                    "dat afwijkt van het bedrag in letters) altijd als uncertain_item. "
                     "Retourneer geldig JSON conform het opgegeven schema."
                 ),
             },
@@ -209,7 +217,7 @@ def extract_data(client: OpenAI, document_text: str) -> dict:
                 "role": "user",
                 "content": (
                     f"Schema:\n{json.dumps(EXTRACTION_SCHEMA, ensure_ascii=False)}"
-                    f"\n\nContract:\n{document_text[:12000]}"
+                    f"\n\nContract:\n{document_text[:MAX_CONTRACT_CHARS]}"
                 ),
             },
         ],
@@ -339,6 +347,14 @@ if st.session_state.active_idx is None:
                 st.write(f"✓ PDF ingelezen — {len(document_text):,} tekens")
                 log_event("Extractie gestart", uploaded.name, f"{len(document_text):,} tekens")
 
+                if len(document_text) > MAX_CONTRACT_CHARS:
+                    st.warning(
+                        f"⚠️ Contract is langer ({len(document_text):,} tekens) dan de verwerkingslimiet "
+                        f"({MAX_CONTRACT_CHARS:,}); alleen het eerste deel wordt geanalyseerd. "
+                        "Contract geflagd voor extra handmatige review."
+                    )
+                    log_event("Geflagd", uploaded.name, "Contract langer dan verwerkingslimiet — handmatige review vereist")
+
                 st.write("🤖 Gegevens extraheren via AI (gpt-4o-mini, temperature=0)...")
                 try:
                     extracted = extract_data(client, document_text)
@@ -350,7 +366,7 @@ if st.session_state.active_idx is None:
                 st.write("📋 Checklist valideren tegen RJ 254...")
                 checklist  = build_checklist(extracted)
                 status_val = determine_status(checklist)
-                precision, recall = compute_precision_recall(checklist)
+                volledigheid = compute_volledigheid(checklist)
                 st.write(f"✓ Validatie klaar — status: **{status_val}**")
                 log_event("Validatie", uploaded.name, f"Status: {status_val}")
 
@@ -378,8 +394,7 @@ if st.session_state.active_idx is None:
                 "status":      status_val,
                 "toelichting": toelichting,
                 "approved":    False,
-                "precision":   precision,
-                "recall":      recall,
+                "volledigheid": volledigheid,
                 "verwerkt_op": datetime.now().strftime("%Y-%m-%d %H:%M"),
             }
             st.session_state.contracts.append(contract)
@@ -404,8 +419,7 @@ if st.session_state.active_idx is None:
                 "Goedgekeurd":     "Ja" if c.get("approved") else "Nee",
                 "Hoofdsom":        hs,
                 "Rentepercentage": f"{c['data'].get('interest_rate', '—')}%" if c["data"].get("interest_rate") is not None else "—",
-                "Precision":       f"{c['precision']:.0f}%" if c.get("precision") is not None else "—",
-                "Recall":          f"{c['recall']:.0f}%"    if c.get("recall")    is not None else "—",
+                "Volledigheid verplicht": f"{c['volledigheid']:.0f}%" if c.get("volledigheid") is not None else "—",
             })
         st.dataframe(pd.DataFrame(overzicht), use_container_width=True, hide_index=True)
 
@@ -450,13 +464,17 @@ else:
         lage_velden = ", ".join(i["label"] for i in cl if i.get("confidence") == "low")
         st.warning(f"⚠️ **Extra review aanbevolen** — lage confidence voor: {lage_velden}")
 
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Verplichte velden",   f"{n_aanwezig}/{n_verplicht}")
     m2.metric("Onzekere velden",     n_onzeker)
     m3.metric("Ontbrekende velden",  n_ontbreekt)
     m4.metric("Bronquotes",          n_quotes)
-    m5.metric("Precision", f"{c['precision']:.0f}%" if c.get("precision") is not None else "—", help="Streefwaarde ≥ 95%")
-    m6.metric("Recall",    f"{c['recall']:.0f}%"    if c.get("recall")    is not None else "—", help="Streefwaarde ≥ 90%")
+    m5.metric(
+        "Volledigheid verplicht",
+        f"{c['volledigheid']:.0f}%" if c.get("volledigheid") is not None else "—",
+        help="Verplichte RJ 254-velden correct herkend in dit contract. "
+             "Precision/recall worden gemeten via de regressietestset met ground truth (zie borgingsplan).",
+    )
 
     st.divider()
 
@@ -481,7 +499,7 @@ else:
         for item in cl:
             if filter_verplicht and not item["required"]:
                 continue
-            if filter_aandacht and item["remark"] in ("Aanwezig", "Niet aangetroffen") and item["present"]:
+            if filter_aandacht and item["remark"] == "Aanwezig":
                 continue
             rows.append({
                 "Onderdeel":    item["label"],
@@ -524,12 +542,19 @@ else:
             st.warning(f"**{n_onzeker} veld(en) onzeker:** " + ", ".join(i["label"] for i in cl if i["remark"] == "Onzeker volgens model"))
 
         with st.expander("📊 Kwaliteitsmetrieken (borgingsplan streefwaarden)"):
-            prec, rec = c.get("precision"), c.get("recall")
-            c1, c2 = st.columns(2)
-            c1.metric("Precision", f"{prec:.1f}%" if prec is not None else "—", help="Streefwaarde ≥ 95%")
-            c2.metric("Recall",    f"{rec:.1f}%"  if rec  is not None else "—", help="Streefwaarde ≥ 90%")
-            if prec is not None and prec < 95: st.warning("Precision onder streefwaarde (≥ 95%)")
-            if rec  is not None and rec  < 90: st.warning("Recall onder streefwaarde (≥ 90%)")
+            vol = c.get("volledigheid")
+            st.metric(
+                "Volledigheid verplichte velden",
+                f"{vol:.1f}%" if vol is not None else "—",
+                help="Live volledigheid van dit contract.",
+            )
+            if vol is not None and vol < 100:
+                st.warning("Niet alle verplichte RJ 254-velden zijn correct herkend — handmatige review vereist.")
+            st.caption(
+                "Precision (streefwaarde ≥ 95%) en recall (streefwaarde ≥ 90%) worden gemeten via de "
+                "regressietestset met vooraf vastgestelde verwachte waarden — zie het borgingsplan. "
+                "PoC-validatie op 5 testcontracten: 94,6% (35/37 velden correct)."
+            )
 
     with tab2:
         st.subheader("Concept-toelichting jaarrekening")
@@ -541,7 +566,6 @@ else:
 
         toelichting_edit = st.text_area(
             "Concept-toelichting (bewerkbaar)",
-            value=st.session_state[toelichting_key],
             height=360,
             key=toelichting_key,
             disabled=c.get("approved", False),
