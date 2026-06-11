@@ -169,7 +169,7 @@ def build_checklist(data: dict) -> list[dict]:
             "value":      value,
             "present":    present,
             "remark":     remark,
-            "confidence": scores.get(field),
+            "confidence": scores.get(field) or scores.get(f"{field}.value"),
             "quote":      (data.get("source_quotes") or {}).get(field),
         })
     return rows
@@ -201,13 +201,16 @@ def extract_data(client: OpenAI, document_text: str) -> dict:
                 "content": (
                     "Je analyseert een Nederlandse leningsovereenkomst voor middelgrote rechtspersonen (RJ 254). "
                     "Extraheer ALLEEN informatie die expliciet in de contracttekst staat. "
-                    "Gebruik null voor ontbrekende velden — verzin niets. "
+                    "Gebruik null voor ontbrekende velden — verzin niets en bereken geen waarden uit andere gegevens. "
                     "Geef per geëxtraheerd veld een confidence score: 'high' (expliciet vermeld), "
-                    "'medium' (afgeleid), 'low' (onzeker). "
-                    "Hanteer als ingangsdatum de datum van uitbetaling indien het contract bepaalt dat de "
-                    "looptijd daarop aanvangt; gebruik anders de ondertekeningsdatum met confidence 'medium'. "
-                    "Geef berekende of afgeleide waarden (zoals een einddatum afgeleid uit de looptijd) "
-                    "nooit confidence 'high', maar 'medium'. "
+                    "'medium' (direct afgeleid uit een expliciete contractbepaling), 'low' (onzeker). "
+                    "Ingangsdatum: gebruik een expliciet vermelde uitbetalings- of ingangsdatum; is alleen een "
+                    "ondertekeningsdatum vermeld, gebruik die met confidence 'medium'. Tel nooit zelf dagen, "
+                    "werkdagen of termijnen op bij een datum. "
+                    "Einddatum: alleen invullen als het contract die expliciet vermeldt of direct definieert "
+                    "(bijvoorbeeld 'zeven jaar na de ingangsdatum'); zo'n afgeleide datum krijgt confidence "
+                    "'medium'. Een einddatum die alleen uit het aflossingsschema zou volgen, blijft null. "
+                    "source_quotes bevatten uitsluitend letterlijke citaten uit de contracttekst. "
                     "Signaleer interne tegenstrijdigheden in het contract (bijvoorbeeld een bedrag in cijfers "
                     "dat afwijkt van het bedrag in letters) altijd als uncertain_item. "
                     "Retourneer geldig JSON conform het opgegeven schema."
